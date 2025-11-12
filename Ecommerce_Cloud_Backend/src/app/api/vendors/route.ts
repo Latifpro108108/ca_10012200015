@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         isVerified: true,
         isActive: true,
         rating: true,
+        ownerId: true,
         _count: {
           select: {
             products: true,
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
       isVerified,
       isActive,
       featured,
+      ownerId,
     } = body;
 
     // Validation
@@ -107,6 +109,45 @@ export async function POST(request: NextRequest) {
         {
           status: 'error',
           message: 'Please provide all required fields',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!ownerId) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Vendor owner (customer) is required',
+        },
+        { status: 400 }
+      );
+    }
+
+    const owner = await prisma.customer.findUnique({
+      where: { id: ownerId },
+      include: {
+        vendorProfile: {
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!owner) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Invalid owner ID. Please login again.',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (owner.vendorProfile) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'You already have a vendor profile assigned to this account',
         },
         { status: 400 }
       );
@@ -155,6 +196,7 @@ export async function POST(request: NextRequest) {
         isVerified: typeof isVerified === 'boolean' ? isVerified : false,
         isActive: typeof isActive === 'boolean' ? isActive : true,
         featured: typeof featured === 'boolean' ? featured : false,
+        ownerId,
       },
     });
 

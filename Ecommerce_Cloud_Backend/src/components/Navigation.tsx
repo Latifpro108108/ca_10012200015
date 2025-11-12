@@ -13,7 +13,6 @@ import {
   FaSearch,
   FaHome,
   FaUser,
-  FaEnvelope,
 } from "react-icons/fa";
 import { FiChevronDown, FiMenu } from "react-icons/fi";
 
@@ -56,7 +55,6 @@ export default function Navigation() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [user, setUser] = useState<SessionUser | null>(null);
   const [cartCount, setCartCount] = useState(0);
-  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   useEffect(() => {
     async function loadCategories() {
@@ -79,13 +77,7 @@ export default function Navigation() {
     function loadUser() {
       try {
         const stored = localStorage.getItem("gomart:user");
-        const userData = stored ? JSON.parse(stored) : null;
-        setUser(userData);
-        
-        // Load unread messages when user is loaded
-        if (userData?.id) {
-          loadUnreadMessages(userData.id);
-        }
+        setUser(stored ? JSON.parse(stored) : null);
       } catch (error) {
         setUser(null);
       }
@@ -93,25 +85,6 @@ export default function Navigation() {
 
     function loadCart() {
       setCartCount(readCartCount());
-    }
-
-    async function loadUnreadMessages(userId: string) {
-      try {
-        const res = await fetch(`/api/conversations?userId=${userId}`);
-        if (res.ok) {
-          const data = await res.json();
-          // Count total unread messages from all conversations
-          // Check if user is sender or receiver to get correct unread count
-          const totalUnread = data.data?.conversations?.reduce((sum: number, conv: any) => {
-            const unread = conv.senderId === userId ? conv.senderUnread : conv.receiverUnread;
-            return sum + (unread || 0);
-          }, 0) || 0;
-          setUnreadMessageCount(totalUnread);
-        }
-      } catch (error) {
-        // Silently fail - not critical
-        console.error('Failed to load unread messages:', error);
-      }
     }
 
     function handleStorage(event: StorageEvent) {
@@ -124,37 +97,13 @@ export default function Navigation() {
           loadCart();
         }, 0);
       }
-      if (event.key === "gomart:messages") {
-        // Reload unread count when messages change
-        const stored = localStorage.getItem("gomart:user");
-        if (stored) {
-          const userData = JSON.parse(stored);
-          if (userData?.id) {
-            loadUnreadMessages(userData.id);
-          }
-        }
-      }
     }
 
     loadUser();
     loadCart();
     window.addEventListener("storage", handleStorage);
 
-    // Poll for new messages every 30 seconds
-    const messageInterval = setInterval(() => {
-      const stored = localStorage.getItem("gomart:user");
-      if (stored) {
-        const userData = JSON.parse(stored);
-        if (userData?.id) {
-          loadUnreadMessages(userData.id);
-        }
-      }
-    }, 30000); // 30 seconds
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      clearInterval(messageInterval);
-    };
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   // Close menus when clicking outside
@@ -253,14 +202,6 @@ export default function Navigation() {
                 </Link>
                 <Link href="/ui/vendors/list" className={navClass("/ui/vendors/list")}>
                   Vendors
-                </Link>
-                <Link href="/ui/conversations" className={`${navClass("/ui/conversations")} relative`}>
-                  Messages
-                  {mounted && unreadMessageCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-semibold">
-                      {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                    </span>
-                  )}
                 </Link>
               </div>
 
@@ -408,18 +349,6 @@ export default function Navigation() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Vendors
-                  </Link>
-                  <Link
-                    href="/ui/conversations"
-                    className={`${navClass("/ui/conversations")} py-2 flex items-center gap-2 relative`}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <FaEnvelope /> Messages
-                    {mounted && unreadMessageCount > 0 && (
-                      <span className="ml-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-2 font-semibold">
-                        {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
-                      </span>
-                    )}
                   </Link>
                   <Link
                     href="/ui/categories/list"

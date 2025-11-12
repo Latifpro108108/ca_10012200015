@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
             isVerified: true,
             isActive: true,
             rating: true,
+            ownerId: true,
           },
         },
         reviews: {
@@ -107,13 +108,11 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-  } catch (error: any) {
-    console.error('Failed to fetch products:', error);
+  } catch (error) {
     return NextResponse.json(
       {
         status: 'error',
         message: 'Failed to fetch products',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
       { status: 500 }
     );
@@ -202,10 +201,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Auto-assign vendor if not provided
     let finalVendorId = vendorId;
     if (!finalVendorId) {
-      // Get the first available active vendor
       const defaultVendor = await prisma.vendor.findFirst({
         where: { isActive: true },
         orderBy: { joinedDate: 'asc' },
@@ -223,12 +220,11 @@ export async function POST(request: NextRequest) {
 
       finalVendorId = defaultVendor.id;
     } else {
-      // Verify vendor exists if provided
       const vendor = await prisma.vendor.findUnique({
         where: { id: finalVendorId },
       });
 
-      if (!vendor) {
+      if (!vendor || !vendor.isActive) {
         return NextResponse.json(
           {
             status: 'error',
@@ -285,13 +281,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error('Product creation error:', error);
+  } catch (error) {
     return NextResponse.json(
       {
         status: 'error',
-        message: error.message || 'Failed to create product',
-        details: process.env.NODE_ENV === 'development' ? error.toString() : undefined,
+        message: 'Failed to create product',
       },
       { status: 500 }
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -38,9 +38,21 @@ type VendorForm = {
   deliveryRegions: string[];
 };
 
+type UserSession = {
+  id: string;
+  isAdmin?: boolean;
+  vendorProfile?: {
+    id: string;
+    vendorName: string;
+    isActive: boolean;
+  } | null;
+};
+
 export default function NewVendorPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<UserSession | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [form, setForm] = useState<VendorForm>({
     vendorName: "",
     email: "",
@@ -61,6 +73,33 @@ export default function NewVendorPage() {
     }
     return form.deliveryRegions.join(", ");
   }, [form.deliveryRegions]);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("gomart:user");
+    if (!userStr) {
+      toast.error("Please sign in before registering a vendor profile.");
+      router.push("/ui/customers/login");
+      setAuthChecked(true);
+      return;
+    }
+
+    try {
+      const session: UserSession = JSON.parse(userStr);
+      if (session.vendorProfile) {
+        toast.info("You already have a vendor profile.");
+        router.push("/ui/vendors/list");
+        setAuthChecked(true);
+        return;
+      }
+
+      setUser(session);
+      setAuthChecked(true);
+    } catch (error) {
+      toast.error("Authentication error. Please sign in again.");
+      router.push("/ui/customers/login");
+      setAuthChecked(true);
+    }
+  }, [router]);
 
   function toggleDeliveryRegion(region: string) {
     setForm((prev) => {
@@ -95,13 +134,25 @@ export default function NewVendorPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!authChecked || !user) {
+      toast.error("Please sign in to continue.");
+      return;
+    }
+    if (user.vendorProfile) {
+      toast.error("You already have a vendor account.");
+      router.push("/ui/vendors/list");
+      return;
+    }
     setLoading(true);
 
     try {
       const res = await fetch("/api/vendors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          ownerId: user.id,
+        }),
       });
 
       if (!res.ok) {
@@ -279,8 +330,12 @@ export default function NewVendorPage() {
             <Link href="/ui/vendors/list" className="btn-accent px-6 py-3 rounded-xl text-sm font-semibold text-center">
               Cancel
             </Link>
-            <button type="submit" disabled={loading} className="btn-primary px-6 py-3 rounded-xl text-sm font-semibold disabled:opacity-60">
-              {loading ? "Creating..." : "Create vendor"}
+          <button
+            type="submit"
+            disabled={loading || !authChecked}
+            className="btn-primary px-6 py-3 rounded-xl text-sm font-semibold disabled:opacity-60"
+          >
+            {loading ? "Creating..." : "Create vendor"}
             </button>
           </div>
         </form>

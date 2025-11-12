@@ -1,5 +1,5 @@
-// GoMart E-commerce Platform - Unified User Schema
-// MongoDB Database Configuration - Simplified user system
+// GoMart E-commerce Platform - Prisma Schema
+// MongoDB Database Configuration for Ghana-focused ecommerce platform
 
 generator client {
   provider = "prisma-client-js"
@@ -10,8 +10,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Unified User Entity - Anyone can buy, sell, and message
-model User {
+// Customer Entity - User management with Ghana-specific fields
+model Customer {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   firstName   String
   lastName    String
@@ -21,45 +21,21 @@ model User {
   region      String   // Ghana regions: Greater Accra, Ashanti, etc.
   city        String
   address     String
-  
-  // Optional vendor fields (for users who sell)
-  businessName      String?  // Store/business name if selling
-  businessLicense   String?
-  taxId             String?
-  storeDescription  String?
-  storeLogo         String?
-  storeBanner       String?
-  whatsappNumber    String?
-  instagramHandle   String?
-  facebookPage      String?
-  payoutMethod      String?
-  mobileMoneyNetwork String?
-  mobileMoneyNumber  String?
-  bankName          String?
-  bankAccountName   String?
-  bankAccountNumber String?
-  deliveryRegions   String[] @default([])
-  isSeller          Boolean  @default(false) // True if user sells products
-  isVerified        Boolean  @default(false) // Verified seller
-  
-  joinedDate  DateTime @default(now())
+  dateJoined  DateTime @default(now())
   isActive    Boolean  @default(true)
-  rating      Float?   // Average rating as seller
+  isAdmin     Boolean  @default(false) // Admin can edit all products and manage system
   
   // Relationships
-  products            Product[]          // Products user is selling
-  reviews             Review[]           // Reviews user wrote
-  cart                Cart?              // User's shopping cart
-  conversationsAsSender   Conversation[] @relation("Sender")
-  conversationsAsReceiver Conversation[] @relation("Receiver")
-  sentMessages        Message[]          // Messages user sent
+  reviews          Review[]
+  cart             Cart?
+  sentMessages     Message[] @relation("CustomerMessages")
+  conversations    Conversation[] @relation("CustomerConversations")
+  vendorProfile    Vendor?   @relation("VendorOwner")
   
-  // Performance indexes (email and phoneNumber already indexed via @unique)
-  @@index([isSeller])
-  @@index([isVerified])
-  @@index([region])
+  // Indexes
+  @@index([isAdmin])
   
-  @@map("users")
+  @@map("customers")
 }
 
 // Category Entity - Product categorization
@@ -74,41 +50,86 @@ model Category {
   @@map("categories")
 }
 
+// Vendor Entity - Seller management
+model Vendor {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  vendorName      String
+  email           String   @unique
+  phoneNumber     String   @unique // Should be unique
+  businessAddress String
+  region          String   // Ghana regions
+  city            String
+  businessLicense String?  // Business registration number
+  taxId           String?  // Tax identification
+  storeDescription String?
+  storeLogo       String?
+  storeBanner     String?
+  whatsappNumber  String?
+  instagramHandle String?
+  facebookPage    String?
+  payoutMethod    String?
+  mobileMoneyNetwork String?
+  mobileMoneyNumber  String?
+  bankName        String?
+  bankAccountName String?
+  bankAccountNumber String?
+  deliveryRegions String[] @default([])
+  featured        Boolean  @default(false)
+  joinedDate      DateTime @default(now())
+  isVerified      Boolean  @default(false)
+  isActive        Boolean  @default(true) // Account status
+  rating          Float?   // Average vendor rating
+  ownerId         String?  @unique @db.ObjectId
+  
+  // Relationships
+  products        Product[]
+  receivedMessages Message[] @relation("VendorMessages")
+  conversations   Conversation[] @relation("VendorConversations")
+  owner           Customer? @relation("VendorOwner", fields: [ownerId], references: [id])
+  
+  // Performance indexes
+  @@index([isVerified])
+  @@index([isActive])
+  @@index([region])
+  
+  @@map("vendors")
+}
+
 // Product Entity - Main product catalog
 model Product {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   productName  String
   description  String
-  price        Float    // Stored in Ghana Cedi (GHS)
-  stockQuantity Int     // Available quantity
+  price        Float    // Stored in Ghana Cedi (GHS) - must be positive
+  stockQuantity Int     // Must be non-negative
   imageURL     String?
-  sku          String?
+  sku          String?  // Stock Keeping Unit
   brand        String?
-  weight       Float?   // For shipping (kg)
+  weight       Float?   // For shipping calculations (kg)
   galleryImages String[] @default([])
   highlights   String[] @default([])
   deliveryInfo String?
   returnPolicy String?
   videoURL     String?
   specifications Json?
-  isActive     Boolean  @default(true)
+  isActive     Boolean  @default(true) // Soft delete flag
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
   // Foreign Keys
   categoryId   String   @db.ObjectId
-  ownerId      String   @db.ObjectId  // User who owns/sells this product
+  vendorId     String   @db.ObjectId
   
   // Relationships
-  category       Category        @relation(fields: [categoryId], references: [id])
-  owner          User            @relation(fields: [ownerId], references: [id])
-  reviews        Review[]
-  cartItems      CartItem[]
-  conversations  Conversation[]
+  category     Category      @relation(fields: [categoryId], references: [id])
+  vendor       Vendor        @relation(fields: [vendorId], references: [id])
+  reviews      Review[]
+  cartItems    CartItem[]
+  conversations Conversation[]
   
   // Performance indexes
   @@index([categoryId])
-  @@index([ownerId])
+  @@index([vendorId])
   @@index([price])
   @@index([createdAt])
   @@index([isActive])
@@ -125,14 +146,15 @@ model Review {
   createdAt  DateTime @default(now())
   
   // Foreign Keys
-  userId     String   @db.ObjectId
+  customerId String   @db.ObjectId
   productId  String   @db.ObjectId
   
-  // Relationships
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relationships - FIXED: No cascade delete on product
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   product    Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
   
-  @@index([userId])
+  // Validation
+  @@index([customerId])
   @@index([productId])
   @@index([rating])
   
@@ -145,10 +167,10 @@ model Cart {
   createdAt  DateTime   @default(now())
   
   // Foreign Keys
-  userId     String     @unique @db.ObjectId
+  customerId String     @unique @db.ObjectId
   
   // Relationships
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer   Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
   cartItems  CartItem[]
   
   @@map("carts")
@@ -156,17 +178,17 @@ model Cart {
 
 // CartItem Entity - Items in shopping cart
 model CartItem {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
   quantity  Int
-  addedAt   DateTime @default(now())
+  addedAt   DateTime @default(now()) // Track when item was added
   
   // Foreign Keys
-  cartId    String   @db.ObjectId
-  productId String   @db.ObjectId
+  cartId    String @db.ObjectId
+  productId String @db.ObjectId
   
-  // Relationships
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Relationships - FIXED: No cascade delete on product
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   
   // Prevent duplicate products in same cart
   @@unique([cartId, productId])
@@ -176,58 +198,53 @@ model CartItem {
   @@map("cartItems")
 }
 
-// Conversation Entity - Chat threads between any two users
+// Conversation Entity - Customer-Vendor conversations about products
 model Conversation {
-  id              String    @id @default(auto()) @map("_id") @db.ObjectId
-  subject         String    // Conversation subject (e.g., product name)
-  lastMessageAt   DateTime  @default(now())
-  senderUnread    Int       @default(0) // Unread count for sender
-  receiverUnread  Int       @default(0) // Unread count for receiver
-  createdAt       DateTime  @default(now())
-  
-  // Foreign Keys
-  senderId        String    @db.ObjectId  // User who initiated conversation
-  receiverId      String    @db.ObjectId  // User who received the conversation
-  productId       String?   @db.ObjectId  // Optional - product being discussed
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  subject     String?   // Optional subject line
+  productId   String    @db.ObjectId
+  customerId  String    @db.ObjectId
+  vendorId    String    @db.ObjectId
+  status      String    @default("active") // active, closed, archived
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastMessageAt DateTime @default(now())
   
   // Relationships
-  sender          User      @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver        User      @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  product         Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
-  messages        Message[]
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer    Customer @relation("CustomerConversations", fields: [customerId], references: [id], onDelete: Cascade)
+  vendor      Vendor   @relation("VendorConversations", fields: [vendorId], references: [id], onDelete: Cascade)
+  messages    Message[]
   
-  // Performance indexes
-  @@index([senderId])
-  @@index([receiverId])
+  // Indexes
+  @@index([customerId])
+  @@index([vendorId])
   @@index([productId])
   @@index([lastMessageAt])
-  @@index([senderUnread])
-  @@index([receiverUnread])
   
   @@map("conversations")
 }
 
-// Message Entity - Individual messages within conversations
+// Message Entity - Individual messages in conversations
 model Message {
   id              String       @id @default(auto()) @map("_id") @db.ObjectId
-  content         String       // Message text content
+  conversationId  String       @db.ObjectId
+  senderId        String       @db.ObjectId
+  senderType      String       // "customer" or "vendor"
+  content         String
   isRead          Boolean      @default(false)
   createdAt       DateTime     @default(now())
   
-  // Foreign Keys
-  conversationId  String       @db.ObjectId
-  senderId        String       @db.ObjectId  // User who sent this message
-  
   // Relationships
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender          User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  customer        Customer?    @relation("CustomerMessages", fields: [customerId], references: [id], onDelete: Cascade)
+  vendor          Vendor?      @relation("VendorMessages", fields: [vendorId], references: [id], onDelete: Cascade)
+  customerId      String?      @db.ObjectId
+  vendorId        String?      @db.ObjectId
   
-  // Performance indexes
+  // Indexes
   @@index([conversationId])
-  @@index([senderId])
   @@index([createdAt])
-  @@index([isRead])
   
   @@map("messages")
 }
-

@@ -58,6 +58,8 @@ export default function EditProductPage() {
   const [primaryImage, setPrimaryImage] = useState<string>("");
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [highlightsText, setHighlightsText] = useState<string>("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [form, setForm] = useState<ProductForm>({
     productName: "",
@@ -75,9 +77,33 @@ export default function EditProductPage() {
     isActive: true,
   });
 
+  // Load current user session
+  useEffect(() => {
+    const userStr = localStorage.getItem("gomart:user");
+    if (!userStr) {
+      toast.error("Please login to manage products");
+      router.push("/ui/customers/login");
+      return;
+    }
+
+    try {
+      const session = JSON.parse(userStr);
+      if (!session.isAdmin) {
+        toast.error("Only admin users can edit products");
+        router.push("/ui/products/list");
+        return;
+      }
+      setIsAdmin(true);
+      setUserId(session.id);
+    } catch (error) {
+      toast.error("Authentication error");
+      router.push("/ui/customers/login");
+    }
+  }, [router]);
+
   useEffect(() => {
     async function load() {
-      if (!id) return;
+      if (!id || !isAdmin) return;
       setLoading(true);
       try {
         const [productRes, categoriesRes, vendorsRes] = await Promise.all([
@@ -137,7 +163,7 @@ export default function EditProductPage() {
     }
 
     load();
-  }, [id, router]);
+  }, [id, isAdmin, router]);
 
   async function readFile(file: File) {
     return new Promise<string>((resolve, reject) => {
@@ -179,6 +205,11 @@ export default function EditProductPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!id) return;
+    if (!userId) {
+      toast.error("Please login again before saving changes.");
+      router.push("/ui/customers/login");
+      return;
+    }
     setSaving(true);
 
     try {
@@ -206,6 +237,7 @@ export default function EditProductPage() {
           deliveryInfo: form.deliveryInfo,
           returnPolicy: form.returnPolicy,
           videoURL: form.videoURL,
+          editorId: userId,
         }),
       });
 
@@ -319,6 +351,7 @@ export default function EditProductPage() {
                 onChange={(e) => setForm({ ...form, vendorId: e.target.value })}
                 className="w-full"
                 style={{ appearance: 'auto' }}
+                disabled={!isAdmin}
               >
                 <option value="">-- Keep current vendor --</option>
                 {vendors.map((vendor) => (
@@ -328,7 +361,9 @@ export default function EditProductPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-400 mt-1">
-                Leave unchanged to keep current vendor
+                {isAdmin
+                  ? "Select a vendor to reassign this product"
+                  : "Vendors cannot change the assigned vendor"}
               </p>
             </div>
           </div>

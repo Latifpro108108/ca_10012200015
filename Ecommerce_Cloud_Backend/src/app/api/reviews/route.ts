@@ -1,30 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// GET /api/reviews - Get all reviews
+// GET /api/reviews - Get reviews with optional filtering
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('productId');
     const customerId = searchParams.get('customerId');
-    const rating = searchParams.get('rating');
+    const minRating = searchParams.get('minRating');
 
     const where: any = {};
+
     if (productId) where.productId = productId;
     if (customerId) where.customerId = customerId;
-    if (rating) where.rating = parseInt(rating);
+    if (minRating) where.rating = { gte: parseInt(minRating, 10) };
 
     const reviews = await prisma.review.findMany({
       where,
       include: {
         customer: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
           },
         },
         product: {
           select: {
+            id: true,
             productName: true,
             imageURL: true,
           },
@@ -37,40 +40,40 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       status: 'success',
-      data: { reviews },
+      data: {
+        reviews,
+        count: reviews.length,
+      },
     });
-  } catch (error: any) {
-    console.error('Failed to fetch reviews:', error);
+  } catch (error) {
+    console.error('Get reviews error:', error);
     return NextResponse.json(
       {
         status: 'error',
         message: 'Failed to fetch reviews',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
       { status: 500 }
     );
   }
 }
 
-// POST /api/reviews - Create new review
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerId, productId, rating, comment } = body;
+    const { productId, customerId, rating, comment } = body;
 
-    // Validation
-    if (!customerId || !productId || !rating) {
+    if (!productId || !customerId || rating === undefined) {
       return NextResponse.json(
         {
           status: 'error',
-          message: 'Customer ID, product ID, and rating are required',
+          message: 'Please provide productId, customerId, and rating',
         },
         { status: 400 }
       );
     }
 
-    // Validate rating range
-    if (rating < 1 || rating > 5) {
+    const parsedRating = parseInt(rating, 10);
+    if (Number.isNaN(parsedRating) || parsedRating < 1 || parsedRating > 5) {
       return NextResponse.json(
         {
           status: 'error',
@@ -80,11 +83,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if product exists
     const product = await prisma.product.findUnique({
       where: { id: productId },
     });
-
     if (!product) {
       return NextResponse.json(
         {
@@ -95,11 +96,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if customer exists
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
     });
-
     if (!customer) {
       return NextResponse.json(
         {
@@ -110,14 +109,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if customer already reviewed this product
     const existingReview = await prisma.review.findFirst({
       where: {
-        customerId,
         productId,
+        customerId,
       },
     });
-
     if (existingReview) {
       return NextResponse.json(
         {
@@ -130,20 +127,22 @@ export async function POST(request: NextRequest) {
 
     const review = await prisma.review.create({
       data: {
-        customerId,
         productId,
-        rating: parseInt(rating),
-        comment,
+        customerId,
+        rating: parsedRating,
+        comment: comment || null,
       },
       include: {
         customer: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
           },
         },
         product: {
           select: {
+            id: true,
             productName: true,
             imageURL: true,
           },
@@ -159,13 +158,12 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error('Failed to create review:', error);
+  } catch (error) {
+    console.error('Create review error:', error);
     return NextResponse.json(
       {
         status: 'error',
-        message: error.message || 'Failed to create review',
-        details: process.env.NODE_ENV === 'development' ? error.toString() : undefined,
+        message: 'Failed to create review',
       },
       { status: 500 }
     );

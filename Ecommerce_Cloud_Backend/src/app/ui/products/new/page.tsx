@@ -128,15 +128,15 @@ export default function NewProductPage() {
         body: JSON.stringify({
           productName: form.productName,
           description: form.description,
-          price: form.price, // Send as string, API will parse
-          stockQuantity: form.stockQuantity, // Send as string, API will parse
+          price: parseFloat(form.price),
+          stockQuantity: parseInt(form.stockQuantity),
           categoryId: form.categoryId,
           vendorId: form.vendorId || undefined, // Optional - will be auto-assigned on backend
           imageURL: primaryImage || undefined,
           galleryImages,
           sku: form.sku || undefined,
           brand: form.brand || undefined,
-          weight: form.weight || undefined, // Send as string, API will parse
+          weight: form.weight ? parseFloat(form.weight) : undefined,
           isActive: form.isActive,
           highlights: highlightList,
           deliveryInfo: form.deliveryInfo || undefined,
@@ -153,7 +153,6 @@ export default function NewProductPage() {
       toast.success("Product created successfully!");
       router.push("/ui/products/list");
     } catch (error: any) {
-      console.error("Product creation error:", error);
       toast.error(error.message || "Failed to create product");
     } finally {
       setLoading(false);
@@ -283,7 +282,7 @@ export default function NewProductPage() {
                 className="w-full"
                 style={{ appearance: 'auto' }}
               >
-                <option value="">-- Auto-assign to me --</option>
+                <option value="">-- Auto-assign vendor --</option>
                 {vendors.map((vendor) => (
                   <option key={vendor.id} value={vendor.id}>
                     {vendor.vendorName} ({vendor.region}) {vendor.isVerified ? "✓" : ""}
@@ -291,7 +290,7 @@ export default function NewProductPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Leave empty to auto-assign to your vendor account
+                Leave empty to auto-assign a default vendor
               </p>
             </div>
           </div>

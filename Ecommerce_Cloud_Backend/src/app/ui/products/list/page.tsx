@@ -54,6 +54,8 @@ export default function ProductsListPage() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadCategories();
@@ -61,7 +63,24 @@ export default function ProductsListPage() {
 
   useEffect(() => {
     loadProducts();
-  }, [search, selectedCategory, minPrice, maxPrice]);
+  }, []);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("gomart:user");
+    if (!userStr) {
+      setIsAdmin(false);
+      setUserId(null);
+      return;
+    }
+    try {
+      const session = JSON.parse(userStr);
+      setIsAdmin(Boolean(session.isAdmin));
+      setUserId(session.id ?? null);
+    } catch {
+      setIsAdmin(false);
+      setUserId(null);
+    }
+  }, []);
 
   async function loadCategories() {
     try {
@@ -78,14 +97,7 @@ export default function ProductsListPage() {
   async function loadProducts() {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (search) params.append("search", search);
-      if (selectedCategory) params.append("category", selectedCategory);
-      if (minPrice) params.append("minPrice", minPrice);
-      if (maxPrice) params.append("maxPrice", maxPrice);
-      params.append("limit", "20");
-
-      const res = await fetch(`/api/products?${params.toString()}`);
+      const res = await fetch(`/api/products?limit=200`);
       if (res.ok) {
         const data = await res.json();
         setProducts(data.data?.products || []);
@@ -99,9 +111,17 @@ export default function ProductsListPage() {
 
   async function handleDelete(id: string, name: string) {
     if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    if (!isAdmin || !userId) {
+      toast.error("Only admin users can delete products.");
+      return;
+    }
 
     try {
-      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/products/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ editorId: userId }),
+      });
       if (res.ok) {
         toast.success("Product deleted successfully");
         loadProducts();
@@ -120,6 +140,26 @@ export default function ProductsListPage() {
     setMinPrice("");
     setMaxPrice("");
   }
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch = search
+        ? product.productName.toLowerCase().includes(search.toLowerCase()) ||
+          product.description.toLowerCase().includes(search.toLowerCase()) ||
+          (product.brand ?? "").toLowerCase().includes(search.toLowerCase())
+        : true;
+
+      const matchesCategory = selectedCategory
+        ? product.category.id === selectedCategory
+        : true;
+
+      const priceValue = product.price;
+      const matchesMinPrice = minPrice ? priceValue >= parseFloat(minPrice) : true;
+      const matchesMaxPrice = maxPrice ? priceValue <= parseFloat(maxPrice) : true;
+
+      return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice;
+    });
+  }, [products, search, selectedCategory, minPrice, maxPrice]);
 
   const activeFilters = useMemo<FilterChip[]>(() => {
     const chips: FilterChip[] = [];
@@ -141,7 +181,7 @@ export default function ProductsListPage() {
     );
   }
 
-  const resultsLabel = products.length === 1 ? "product" : "products";
+  const resultsLabel = filteredProducts.length === 1 ? "product" : "products";
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10 space-y-8">
@@ -150,7 +190,7 @@ export default function ProductsListPage() {
           <span className="pill">Product catalogue</span>
           <h1 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg">Products</h1>
           <p className="text-sm text-gray-200 font-medium">
-            {products.length} {resultsLabel} ready for customers
+            {filteredProducts.length} {resultsLabel} ready for customers
           </p>
         </div>
         <Link href="/ui/products/new" className="btn-accent px-6 py-3 rounded-xl text-sm font-semibold">
@@ -238,22 +278,20 @@ export default function ProductsListPage() {
         )}
       </div>
 
-      {products.length === 0 ? (
-        <div className="glass-surface rounded-3xl p-16 text-center text-gray-300">
-          <FiImage className="mx-auto mb-4 text-6xl text-gray-500" />
-          <h3 className="text-xl font-semibold text-white mb-2">No products found</h3>
-          <p className="text-sm text-gray-400 mb-6">
-            {search || selectedCategory || minPrice || maxPrice
-              ? "Try adjusting your filters"
-              : "Add your first product to showcase it here."}
+      {loading ? (
+        <div className="col-span-full flex justify-center py-10">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-[var(--primary)]"></div>
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="col-span-full text-center py-16 text-gray-300">
+          <p className="text-lg font-semibold mb-2">No products found</p>
+          <p className="text-sm text-gray-400">
+            Try adjusting your search or filters, or create a new product.
           </p>
-          <Link href="/ui/products/new" className="btn-primary inline-flex px-6 py-3 rounded-xl text-sm font-semibold">
-            Add product
-          </Link>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <div key={product.id} className="glass-surface rounded-3xl overflow-hidden flex flex-col">
               <div className="relative h-56 bg-[rgba(255,255,255,0.05)]">
                 {product.imageURL ? (
@@ -261,9 +299,9 @@ export default function ProductsListPage() {
                     src={product.imageURL} 
                     alt={product.productName} 
                     fill 
-                    className="object-contain p-2"
-                    unoptimized={product.imageURL.startsWith('data:')}
-                    quality={95}
+                    className="object-cover" 
+                    quality={90}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-gray-500">
@@ -329,18 +367,22 @@ export default function ProductsListPage() {
                     >
                       View product
                     </Link>
-                    <Link
-                      href={`/ui/products/edit/${product.id}`}
-                      className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-gray-200 hover:border-white/30"
-                    >
-                      <FaEdit className="inline mr-2" /> Edit
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(product.id, product.productName)}
-                      className="rounded-xl border border-[var(--secondary)]/40 px-4 py-2 text-sm font-semibold text-[var(--secondary)] hover:border-[var(--secondary)]"
-                    >
-                      <FaTrash className="inline mr-2" /> Delete
-                    </button>
+                    {isAdmin && (
+                      <>
+                        <Link
+                          href={`/ui/products/edit/${product.id}`}
+                          className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-gray-200 hover:border-white/30"
+                        >
+                          <FaEdit className="inline mr-2" /> Edit
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(product.id, product.productName)}
+                          className="rounded-xl border border-[var(--secondary)]/40 px-4 py-2 text-sm font-semibold text-[var(--secondary)] hover:border-[var(--secondary)]"
+                        >
+                          <FaTrash className="inline mr-2" /> Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

@@ -141,7 +141,14 @@ export default function HomePage() {
                   <Link key={product.id} href={`/ui/products/${product.id}`} className="flex items-center gap-4 rounded-2xl bg-[rgba(15,22,37,0.65)] border border-white/5 p-3 hover:border-white/20 transition">
                     <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-[rgba(255,255,255,0.04)]">
                       {product.imageURL ? (
-                        <Image src={product.imageURL} alt={product.productName} fill className="object-cover" />
+                        <Image 
+                          src={product.imageURL} 
+                          alt={product.productName} 
+                          fill 
+                          className="object-cover" 
+                          quality={90}
+                          sizes="64px"
+                        />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-gray-500">
                           <FiImage className="text-2xl" />
@@ -258,9 +265,9 @@ export default function HomePage() {
                       src={product.imageURL} 
                       alt={product.productName} 
                       fill 
-                      className="object-contain p-2"
-                      unoptimized={product.imageURL.startsWith('data:')}
-                      quality={95}
+                      className="object-cover" 
+                      quality={90}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-gray-500">

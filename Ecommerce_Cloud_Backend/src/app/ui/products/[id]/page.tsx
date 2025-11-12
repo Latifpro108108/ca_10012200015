@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "react-toastify";
-import { FaArrowLeft, FaMapMarkerAlt, FaShoppingCart, FaStar, FaEnvelope, FaWeight, FaStarHalfAlt } from "react-icons/fa";
+import { FaArrowLeft, FaMapMarkerAlt, FaShoppingCart, FaStar, FaEnvelope, FaWeight, FaRegStar } from "react-icons/fa";
 import { FiImage } from "react-icons/fi";
 
 type ProductDetail = {
@@ -14,7 +14,6 @@ type ProductDetail = {
   description: string;
   price: number;
   stockQuantity: number;
-  weight?: number | null;
   imageURL?: string;
   galleryImages?: string[];
   highlights?: string[];
@@ -24,6 +23,7 @@ type ProductDetail = {
   specifications?: Record<string, string> | null;
   brand?: string | null;
   sku?: string | null;
+  weight?: number | null;
   averageRating: number;
   reviewCount: number;
   category: { id: string; categoryName: string };
@@ -41,7 +41,7 @@ type ProductDetail = {
 type Review = {
   id: string;
   rating: number;
-  comment?: string | null;
+  comment: string | null;
   createdAt: string;
   customer: {
     firstName: string;
@@ -56,13 +56,12 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+   const [highlightsText, setHighlightsText] = useState<string>("");
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
-  const [creatingConversation, setCreatingConversation] = useState(false);
-
   useEffect(() => {
     if (!id) return;
 
@@ -97,24 +96,6 @@ export default function ProductDetailPage() {
     loadProduct();
   }, [id, router]);
 
-  useEffect(() => {
-    if (!id) return;
-
-    async function loadReviews() {
-      try {
-        const res = await fetch(`/api/reviews?productId=${id}`);
-        if (res.ok) {
-          const data = await res.json();
-          setReviews(data.data?.reviews || []);
-        }
-      } catch (error) {
-        console.error("Failed to load reviews");
-      }
-    }
-
-    loadReviews();
-  }, [id]);
-
   const gallery = useMemo(() => {
     if (!product) return [] as string[];
     if (product.galleryImages && product.galleryImages.length > 0) {
@@ -122,6 +103,66 @@ export default function ProductDetailPage() {
     }
     return product.imageURL ? [product.imageURL] : [];
   }, [product]);
+
+  const productReviews = product?.reviews ?? [];
+
+  function handleMessageVendor() {
+    const user = localStorage.getItem("gomart:user");
+    if (!user) {
+      toast.error("Please login to message the vendor");
+      router.push("/ui/customers/login");
+      return;
+    }
+
+    if (product?.vendor.whatsappNumber) {
+      const message = encodeURIComponent(`Hi! I'm interested in ${product.productName}`);
+      window.open(`https://wa.me/${product.vendor.whatsappNumber}?text=${message}`, '_blank');
+    } else {
+      toast.info("Vendor contact info not available");
+    }
+  }
+
+  async function handleSubmitReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!product) return;
+
+    const sessionStr = localStorage.getItem("gomart:user");
+    if (!sessionStr) {
+      toast.error("Please login to submit a review");
+      router.push("/ui/customers/login");
+      return;
+    }
+
+    const { id: customerId } = JSON.parse(sessionStr);
+    setSubmittingReview(true);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          customerId,
+          rating: reviewRating,
+          comment: reviewComment.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to submit review");
+      }
+
+      toast.success("Review submitted successfully!");
+      setShowReviewForm(false);
+      setReviewComment("");
+      setReviewRating(5);
+      router.refresh();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to submit review");
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -134,7 +175,7 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-300">
-        <p className="text-lg">Product not available at the moment please try again later or contact the vendor for .</p>
+        <p className="text-lg">Product not available at the moment please try again later or contact the vendor.</p>
         <Link href="/ui/products/list" className="btn-primary inline-flex mt-6 px-6 py-3 rounded-xl text-sm font-semibold">
           Back to products
         </Link>
@@ -182,112 +223,6 @@ export default function ProductDetailPage() {
     }
   }
 
-  async function handleSubmitReview(e: React.FormEvent) {
-    e.preventDefault();
-    if (!product) return;
-
-    const stored = localStorage.getItem("gomart:user");
-    if (!stored) {
-      toast.error("Please login to leave a review");
-      router.push("/ui/customers/login");
-      return;
-    }
-
-    const user = JSON.parse(stored);
-    setSubmittingReview(true);
-
-    try {
-      const res = await fetch("/api/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: user.id,
-          productId: product.id,
-          rating: reviewRating,
-          comment: reviewComment || undefined,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to submit review");
-      }
-
-      toast.success("Review submitted successfully!");
-      setShowReviewForm(false);
-      setReviewComment("");
-      setReviewRating(5);
-
-      // Reload reviews
-      const reviewsRes = await fetch(`/api/reviews?productId=${id}`);
-      if (reviewsRes.ok) {
-        const reviewsData = await reviewsRes.json();
-        setReviews(reviewsData.data?.reviews || []);
-      }
-
-      // Reload product to update average rating
-      const productRes = await fetch(`/api/products/${id}`);
-      if (productRes.ok) {
-        const productData = await productRes.json();
-        setProduct(productData.data?.product);
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to submit review");
-    } finally {
-      setSubmittingReview(false);
-    }
-  }
-
-  async function handleStartConversation() {
-    if (!product) return;
-
-    const stored = localStorage.getItem("gomart:user");
-    if (!stored) {
-      toast.error("Please login to message the vendor");
-      router.push("/ui/customers/login");
-      return;
-    }
-
-    const user = JSON.parse(stored);
-    
-    if (!user?.id) {
-      toast.error("Invalid user session. Please login again.");
-      router.push("/ui/customers/login");
-      return;
-    }
-
-    setCreatingConversation(true);
-
-    try {
-      // Create or get existing conversation
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: user.id,
-          vendorId: product.vendor.id,
-          productId: product.id,
-          subject: `Inquiry about ${product.productName}`,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to start conversation");
-      }
-
-      // Redirect to conversation
-      router.push(`/ui/conversations/${data.data.conversation.id}`);
-    } catch (error: any) {
-      console.error("Failed to start conversation:", error);
-      toast.error(error.message || "Failed to start conversation");
-    } finally {
-      setCreatingConversation(false);
-    }
-  }
-
   const specificationsEntries = product.specifications
     ? Object.entries(product.specifications)
     : [];
@@ -310,10 +245,10 @@ export default function ProductDetailPage() {
                 src={selectedImage} 
                 alt={product.productName} 
                 fill 
-                className="object-contain p-4"
-                unoptimized={selectedImage.startsWith('data:')}
-                quality={100}
+                className="object-cover" 
+                quality={95}
                 priority
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
               />
             ) : (
               <div className="flex h-full items-center justify-center text-gray-500">
@@ -344,9 +279,9 @@ export default function ProductDetailPage() {
                     src={image} 
                     alt="Thumbnail" 
                     fill 
-                    className="object-contain p-1"
-                    unoptimized={image.startsWith('data:')}
+                    className="object-cover" 
                     quality={90}
+                    sizes="80px"
                   />
                 </button>
               ))}
@@ -366,6 +301,15 @@ export default function ProductDetailPage() {
                 <span>{product.averageRating.toFixed(1)}</span>
                 <span className="text-xs text-gray-500">({product.reviewCount} reviews)</span>
               </div>
+              {product.weight && (
+                <>
+                  <span>•</span>
+                  <div className="flex items-center gap-1">
+                    <FaWeight className="text-gray-400" />
+                    <span>{product.weight} kg</span>
+                  </div>
+                </>
+              )}
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <FaMapMarkerAlt />
                 <span>{product.vendor.vendorName}</span>
@@ -388,36 +332,22 @@ export default function ProductDetailPage() {
                 {product.stockQuantity > 0 ? `${product.stockQuantity} in stock` : "Out of stock"}
               </span>
             </div>
-            {product.weight && (
-              <div className="flex items-center justify-between text-xs text-gray-400">
-                <span>Weight</span>
-                <span className="flex items-center gap-1">
-                  <FaWeight /> {product.weight} kg
-                </span>
-              </div>
-            )}
-            <button
-              onClick={handleAddToCart}
-              className="btn-primary w-full px-6 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-            >
-              <FaShoppingCart /> Add to cart
-            </button>
-            <button
-              onClick={handleStartConversation}
-              disabled={creatingConversation}
-              className="btn-accent w-full px-6 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {creatingConversation ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Opening Chat...
-                </>
-              ) : (
-                <>
-                  <FaEnvelope /> Message Vendor
-                </>
-              )}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddToCart}
+                className="btn-primary flex-1 px-6 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+                disabled={product.stockQuantity === 0}
+              >
+                <FaShoppingCart /> Add to cart
+              </button>
+              <button
+                onClick={handleMessageVendor}
+                className="btn-secondary px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+                title="Message Vendor"
+              >
+                <FaEnvelope />
+              </button>
+            </div>
           </div>
 
           {product.highlights && product.highlights.length > 0 && (
@@ -467,7 +397,14 @@ export default function ProductDetailPage() {
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-[rgba(255,255,255,0.08)] overflow-hidden">
                 {product.vendor.storeLogo ? (
-                  <Image src={product.vendor.storeLogo} alt="Vendor logo" width={48} height={48} className="object-cover" />
+                  <Image 
+                    src={product.vendor.storeLogo} 
+                    alt="Vendor logo" 
+                    width={48} 
+                    height={48} 
+                    className="object-cover" 
+                    quality={90}
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-gray-400 text-xs">
                     {product.vendor.vendorName[0]}
@@ -484,56 +421,83 @@ export default function ProductDetailPage() {
                 {product.vendor.storeDescription}
               </p>
             )}
-            {product.vendor.whatsappNumber && (
-              <a
-                href={`https://wa.me/${product.vendor.whatsappNumber.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-accent w-full px-4 py-2 rounded-xl text-xs font-semibold text-center inline-block"
-              >
-                WhatsApp Vendor
-              </a>
-            )}
           </div>
         </div>
       </div>
 
       {/* Reviews Section */}
       <div className="glass-surface rounded-3xl p-6 md:p-10 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-extrabold text-white">Customer Reviews</h2>
-            <p className="text-sm text-gray-300 mt-1">
-              {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
-            </p>
-          </div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-extrabold text-white">Customer Reviews</h2>
           <button
-            onClick={() => setShowReviewForm(true)}
-            className="btn-primary px-6 py-3 rounded-xl text-sm font-semibold"
+            onClick={() => setShowReviewForm((prev) => !prev)}
+            className="btn-secondary px-4 py-2 rounded-xl text-sm font-semibold"
           >
-            Write a Review
+            {showReviewForm ? "Cancel" : "Write a Review"}
           </button>
         </div>
 
-        {reviews.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <p>No reviews yet. Be the first to review this product!</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {reviews.map((review) => (
-              <div key={review.id} className="border border-white/10 rounded-2xl bg-[rgba(255,255,255,0.03)] p-5 space-y-3">
+        {showReviewForm && (
+          <form onSubmit={handleSubmitReview} className="rounded-3xl border border-white/10 bg-[rgba(255,255,255,0.03)] p-6 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-white">Your Rating</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    className="text-2xl transition-colors"
+                  >
+                    {star <= reviewRating ? (
+                      <FaStar className="text-[var(--gold)]" />
+                    ) : (
+                      <FaRegStar className="text-gray-500" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-white">Your Review (Optional)</label>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder="Share your experience with this product..."
+                className="w-full rounded-xl border border-white/10 bg-[rgba(255,255,255,0.05)] px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-[var(--gold)] focus:outline-none min-h-[100px]"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={submittingReview}
+              className="btn-primary px-6 py-3 rounded-xl text-sm font-semibold"
+            >
+              {submittingReview ? "Submitting..." : "Submit Review"}
+            </button>
+          </form>
+        )}
+
+        <div className="space-y-4">
+          {productReviews.length === 0 ? (
+            <p className="text-center text-gray-400 py-8">No reviews yet. Be the first to review this product!</p>
+          ) : (
+            productReviews.map((review) => (
+              <div key={review.id} className="rounded-2xl border border-white/10 bg-[rgba(255,255,255,0.03)] p-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-white">
                       {review.customer.firstName} {review.customer.lastName}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {new Date(review.createdAt).toLocaleDateString()}
+                      {new Date(review.createdAt).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
+                  <div className="flex gap-1">
+                    {Array.from({ length: 5 }, (_, i) => (
                       <FaStar
                         key={i}
                         className={i < review.rating ? "text-[var(--gold)]" : "text-gray-600"}
@@ -545,78 +509,10 @@ export default function ProductDetailPage() {
                   <p className="text-sm text-gray-300 leading-relaxed">{review.comment}</p>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Review Form Modal */}
-      {showReviewForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="glass-surface rounded-3xl p-8 max-w-md w-full space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-extrabold text-white">Write a Review</h3>
-              <button
-                onClick={() => setShowReviewForm(false)}
-                className="text-gray-400 hover:text-white text-2xl"
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitReview} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Rating</label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setReviewRating(star)}
-                      className="text-3xl"
-                    >
-                      <FaStar
-                        className={star <= reviewRating ? "text-[var(--gold)]" : "text-gray-600"}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Comment (Optional)
-                </label>
-                <textarea
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                  className="input w-full h-32"
-                  placeholder="Share your experience with this product..."
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowReviewForm(false)}
-                  className="btn-secondary flex-1 px-6 py-3 rounded-xl text-sm font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingReview}
-                  className="btn-primary flex-1 px-6 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
-                >
-                  {submittingReview ? "Submitting..." : "Submit Review"}
-                </button>
-              </div>
-            </form>
-          </div>
+            ))
+          )}
         </div>
-      )}
-
+      </div>
     </div>
   );
 }
-

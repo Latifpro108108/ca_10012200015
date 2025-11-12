@@ -25,6 +25,15 @@ export async function POST(request: NextRequest) {
           { phoneNumber: identifier.trim() },
         ],
       },
+      include: {
+        vendorProfile: {
+          select: {
+            id: true,
+            vendorName: true,
+            isActive: true,
+          },
+        },
+      },
     });
 
     if (!customer) {

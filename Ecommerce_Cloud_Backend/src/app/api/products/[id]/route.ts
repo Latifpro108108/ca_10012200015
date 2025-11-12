@@ -30,6 +30,7 @@ export async function GET(
             rating: true,
             storeDescription: true,
             storeLogo: true,
+            ownerId: true,
           },
         },
         reviews: {
@@ -111,11 +112,25 @@ export async function PUT(
       returnPolicy,
       videoURL,
       specifications,
+      editorId,
     } = body;
+
+    if (!editorId) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Missing editor information. Please login again.',
+        },
+        { status: 401 }
+      );
+    }
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
       where: { id },
+      select: {
+        vendorId: true,
+      },
     });
 
     if (!existingProduct) {
@@ -184,6 +199,30 @@ export async function PUT(
     }
     if (isActive !== undefined) updateData.isActive = isActive;
 
+    const editor = await prisma.customer.findUnique({
+      where: { id: editorId },
+    });
+
+    if (!editor) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Invalid editor ID. Please login again.',
+        },
+        { status: 401 }
+      );
+    }
+
+    if (!editor.isAdmin) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Only admin users can update products.',
+        },
+        { status: 403 }
+      );
+    }
+
     const product = await prisma.product.update({
       where: { id },
       data: updateData,
@@ -228,10 +267,25 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const body = await request.json().catch(() => null);
+    const editorId = body?.editorId;
+
+    if (!editorId) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Missing editor information. Please login again.',
+        },
+        { status: 401 }
+      );
+    }
 
     // Check if product exists
     const product = await prisma.product.findUnique({
       where: { id },
+      select: {
+        vendorId: true,
+      },
     });
 
     if (!product) {
@@ -241,6 +295,30 @@ export async function DELETE(
           message: 'Product not found',
         },
         { status: 404 }
+      );
+    }
+
+    const editor = await prisma.customer.findUnique({
+      where: { id: editorId },
+    });
+
+    if (!editor) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Invalid editor ID. Please login again.',
+        },
+        { status: 401 }
+      );
+    }
+
+    if (!editor.isAdmin) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message: 'Only admin users can delete products.',
+        },
+        { status: 403 }
       );
     }
 
