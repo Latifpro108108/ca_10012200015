@@ -11,17 +11,25 @@ type ConversationItem = {
   id: string;
   subject: string;
   lastMessageAt: string;
-  customerUnread: number;
-  vendorUnread: number;
-  customer: {
+  senderUnread: number;
+  receiverUnread: number;
+  senderId: string;
+  receiverId: string;
+  sender: {
     id: string;
     firstName: string;
     lastName: string;
-  };
-  vendor: {
-    id: string;
-    vendorName: string;
+    businessName: string | null;
     storeLogo: string | null;
+    isSeller: boolean;
+  };
+  receiver: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    businessName: string | null;
+    storeLogo: string | null;
+    isSeller: boolean;
   };
   product: {
     id: string;
@@ -32,7 +40,7 @@ type ConversationItem = {
   messages: {
     content: string;
     createdAt: string;
-    senderType: string;
+    senderId: string;
   }[];
 };
 
@@ -63,16 +71,15 @@ export default function ConversationsPage() {
       return;
     }
 
-    const type = user.userType || 'customer';
     setUserId(user.id);
-    setUserType(type);
-    loadConversations(user.id, type);
+    setUserType('customer'); // Not needed anymore but keep for compatibility
+    loadConversations(user.id);
   }, [router]);
 
-  async function loadConversations(uid: string, type: string) {
+  async function loadConversations(uid: string) {
     setLoading(true);
     try {
-      const res = await fetch(`/api/conversations?userId=${uid}&userType=${type}`);
+      const res = await fetch(`/api/conversations?userId=${uid}`);
       if (!res.ok) throw new Error("Failed to load conversations");
 
       const data = await res.json();
@@ -88,23 +95,26 @@ export default function ConversationsPage() {
   function getLastMessagePreview(conv: ConversationItem): string {
     if (conv.messages.length === 0) return "No messages yet";
     const lastMsg = conv.messages[0];
-    const isMyMessage = lastMsg.senderType === userType;
+    const isMyMessage = lastMsg.senderId === userId;
     const prefix = isMyMessage ? "You: " : "";
     return prefix + (lastMsg.content.length > 50 ? lastMsg.content.substring(0, 50) + "..." : lastMsg.content);
   }
 
+  function getOtherParty(conv: ConversationItem) {
+    return conv.senderId === userId ? conv.receiver : conv.sender;
+  }
+
   function getOtherPartyName(conv: ConversationItem): string {
-    return userType === 'vendor' 
-      ? `${conv.customer.firstName} ${conv.customer.lastName}`
-      : conv.vendor.vendorName;
+    const other = getOtherParty(conv);
+    return other.businessName || `${other.firstName} ${other.lastName}`;
   }
 
   function getOtherPartyLogo(conv: ConversationItem): string | null {
-    return userType === 'vendor' ? null : conv.vendor.storeLogo;
+    return getOtherParty(conv).storeLogo;
   }
 
   function getUnreadCount(conv: ConversationItem): number {
-    return userType === 'vendor' ? conv.vendorUnread : conv.customerUnread;
+    return conv.senderId === userId ? conv.senderUnread : conv.receiverUnread;
   }
 
   function getTimeAgo(dateString: string): string {

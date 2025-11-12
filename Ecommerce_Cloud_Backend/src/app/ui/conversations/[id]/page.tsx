@@ -26,18 +26,25 @@ type Message = {
 type Conversation = {
   id: string;
   subject: string;
-  customerId: string;
-  vendorId: string;
-  customer: {
+  senderId: string;
+  receiverId: string;
+  sender: {
     id: string;
     firstName: string;
     lastName: string;
-  };
-  vendor: {
-    id: string;
-    vendorName: string;
+    businessName: string | null;
     storeLogo: string | null;
     whatsappNumber: string | null;
+    isSeller: boolean;
+  };
+  receiver: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    businessName: string | null;
+    storeLogo: string | null;
+    whatsappNumber: string | null;
+    isSeller: boolean;
   };
   product: {
     id: string;
@@ -88,7 +95,7 @@ export default function ChatPage({
     }
 
     setUserId(user.id);
-    setUserType(user.userType || 'customer');
+    setUserType('customer'); // Not used anymore
   }, [router]);
 
   useEffect(() => {
@@ -133,7 +140,7 @@ export default function ChatPage({
       await fetch(`/api/conversations/${conversationId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userType }),
+        body: JSON.stringify({ userId }),
       });
 
       // Trigger storage event to update unread count in Navigation
@@ -160,7 +167,6 @@ export default function ChatPage({
         body: JSON.stringify({
           content: messageContent,
           senderId: userId,
-          senderType: userType,
         }),
       });
 
@@ -250,31 +256,33 @@ export default function ChatPage({
           <FaArrowLeft size={20} />
         </button>
 
-        <Link
-          href={`/ui/vendors/${conversation.vendor.id}`}
-          className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition"
-        >
-          {conversation.vendor.storeLogo ? (
-            <Image
-              src={conversation.vendor.storeLogo}
-              alt={conversation.vendor.vendorName}
-              width={40}
-              height={40}
-              className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-              unoptimized={conversation.vendor.storeLogo.startsWith("data:")}
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center border-2 border-gray-200">
-              <span className="text-green-600 font-bold">
-                {conversation.vendor.vendorName.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
+        {(() => {
+          const otherParty = conversation.senderId === userId ? conversation.receiver : conversation.sender;
+          const otherPartyName = otherParty.businessName || `${otherParty.firstName} ${otherParty.lastName}`;
+          
+          return (
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              {otherParty.storeLogo ? (
+                <Image
+                  src={otherParty.storeLogo}
+                  alt={otherPartyName}
+                  width={40}
+                  height={40}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                  unoptimized={otherParty.storeLogo.startsWith("data:")}
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center border-2 border-gray-200">
+                  <span className="text-green-600 font-bold">
+                    {otherPartyName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
 
-          <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-gray-900 truncate">
-              {conversation.vendor.vendorName}
-            </h2>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold text-gray-900 truncate">
+                  {otherPartyName}
+                </h2>
             {conversation.product && (
               <p className="text-xs text-gray-600 truncate flex items-center gap-1">
                 <FaBox className="flex-shrink-0" />
@@ -282,22 +290,24 @@ export default function ChatPage({
               </p>
             )}
           </div>
-        </Link>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          {conversation.vendor.whatsappNumber && (
-            <a
-              href={`https://wa.me/${conversation.vendor.whatsappNumber.replace(/[^0-9]/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 text-green-600 hover:bg-green-50 rounded-full transition"
-              title="WhatsApp"
-            >
-              <FaWhatsapp size={20} />
-            </a>
-          )}
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {otherParty.whatsappNumber && (
+              <a
+                href={`https://wa.me/${otherParty.whatsappNumber.replace(/[^0-9]/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 text-green-600 hover:bg-green-50 rounded-full transition"
+                title="WhatsApp"
+              >
+                <FaWhatsapp size={20} />
+              </a>
+            )}
+          </div>
         </div>
+        );
+      })()}
       </div>
 
       {/* Product Info Banner */}
@@ -343,7 +353,7 @@ export default function ChatPage({
 
             {/* Messages for this date */}
             {messages.map((msg) => {
-              const isMyMessage = msg.senderType === userType;
+              const isMyMessage = msg.senderId === userId;
 
               return (
                 <div
