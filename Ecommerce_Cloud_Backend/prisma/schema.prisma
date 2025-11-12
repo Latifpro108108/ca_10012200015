@@ -27,6 +27,7 @@ model Customer {
   // Relationships
   reviews     Review[]
   cart        Cart?
+  messages    Message[]
   
   @@map("customers")
 }
@@ -75,6 +76,7 @@ model Vendor {
   
   // Relationships
   products        Product[]
+  messages        Message[]
   
   // Performance indexes
   @@index([isVerified])
@@ -184,4 +186,30 @@ model CartItem {
   @@index([productId])
   
   @@map("cartItems")
+}
+
+// Message Entity - Customer-Vendor messaging system
+model Message {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  subject     String   // Message subject
+  message     String   // Message content
+  productId   String?  @db.ObjectId // Optional - if message is about a specific product
+  status      String   @default("unread") // unread, read, replied
+  createdAt   DateTime @default(now())
+  
+  // Foreign Keys
+  customerId  String   @db.ObjectId
+  vendorId    String   @db.ObjectId
+  
+  // Relationships
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  // Performance indexes
+  @@index([customerId])
+  @@index([vendorId])
+  @@index([status])
+  @@index([createdAt])
+  
+  @@map("messages")
 }

@@ -13,6 +13,7 @@ import {
   FaSearch,
   FaHome,
   FaUser,
+  FaEnvelope,
 } from "react-icons/fa";
 import { FiChevronDown, FiMenu } from "react-icons/fi";
 
@@ -203,6 +204,9 @@ export default function Navigation() {
                 <Link href="/ui/vendors/list" className={navClass("/ui/vendors/list")}>
                   Vendors
                 </Link>
+                <Link href="/ui/messages" className={navClass("/ui/messages")}>
+                  Messages
+                </Link>
               </div>
 
               <div className="hidden md:flex items-center space-x-4">
@@ -349,6 +353,13 @@ export default function Navigation() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Vendors
+                  </Link>
+                  <Link
+                    href="/ui/messages"
+                    className={`${navClass("/ui/messages")} py-2 flex items-center gap-2`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <FaEnvelope /> Messages
                   </Link>
                   <Link
                     href="/ui/categories/list"

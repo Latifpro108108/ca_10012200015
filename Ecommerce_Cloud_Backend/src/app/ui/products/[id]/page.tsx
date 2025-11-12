@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "react-toastify";
-import { FaArrowLeft, FaMapMarkerAlt, FaShoppingCart, FaStar } from "react-icons/fa";
+import { FaArrowLeft, FaMapMarkerAlt, FaShoppingCart, FaStar, FaEnvelope, FaWeight, FaStarHalfAlt } from "react-icons/fa";
 import { FiImage } from "react-icons/fi";
 
 type ProductDetail = {
@@ -14,6 +14,7 @@ type ProductDetail = {
   description: string;
   price: number;
   stockQuantity: number;
+  weight?: number | null;
   imageURL?: string;
   galleryImages?: string[];
   highlights?: string[];
@@ -33,6 +34,18 @@ type ProductDetail = {
     isVerified: boolean;
     storeDescription?: string | null;
     storeLogo?: string | null;
+    whatsappNumber?: string | null;
+  };
+};
+
+type Review = {
+  id: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  customer: {
+    firstName: string;
+    lastName: string;
   };
 };
 
@@ -43,6 +56,15 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showMessageForm, setShowMessageForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [messageSubject, setMessageSubject] = useState("");
+  const [messageContent, setMessageContent] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [submittingMessage, setSubmittingMessage] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -77,6 +99,24 @@ export default function ProductDetailPage() {
 
     loadProduct();
   }, [id, router]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    async function loadReviews() {
+      try {
+        const res = await fetch(`/api/reviews?productId=${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setReviews(data.data?.reviews || []);
+        }
+      } catch (error) {
+        console.error("Failed to load reviews");
+      }
+    }
+
+    loadReviews();
+  }, [id]);
 
   const gallery = useMemo(() => {
     if (!product) return [] as string[];
@@ -145,6 +185,107 @@ export default function ProductDetailPage() {
     }
   }
 
+  async function handleSubmitReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!product) return;
+
+    const stored = localStorage.getItem("gomart:user");
+    if (!stored) {
+      toast.error("Please login to leave a review");
+      router.push("/ui/customers/login");
+      return;
+    }
+
+    const user = JSON.parse(stored);
+    setSubmittingReview(true);
+
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: user.id,
+          productId: product.id,
+          rating: reviewRating,
+          comment: reviewComment || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to submit review");
+      }
+
+      toast.success("Review submitted successfully!");
+      setShowReviewForm(false);
+      setReviewComment("");
+      setReviewRating(5);
+
+      // Reload reviews
+      const reviewsRes = await fetch(`/api/reviews?productId=${id}`);
+      if (reviewsRes.ok) {
+        const reviewsData = await reviewsRes.json();
+        setReviews(reviewsData.data?.reviews || []);
+      }
+
+      // Reload product to update average rating
+      const productRes = await fetch(`/api/products/${id}`);
+      if (productRes.ok) {
+        const productData = await productRes.json();
+        setProduct(productData.data?.product);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to submit review");
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
+
+  async function handleSendMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!product) return;
+
+    const stored = localStorage.getItem("gomart:user");
+    if (!stored) {
+      toast.error("Please login to send a message");
+      router.push("/ui/customers/login");
+      return;
+    }
+
+    const user = JSON.parse(stored);
+    setSubmittingMessage(true);
+
+    try {
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: user.id,
+          vendorId: product.vendor.id,
+          productId: product.id,
+          subject: messageSubject,
+          message: messageContent,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to send message");
+      }
+
+      toast.success("Message sent to vendor!");
+      setShowMessageForm(false);
+      setMessageSubject("");
+      setMessageContent("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send message");
+    } finally {
+      setSubmittingMessage(false);
+    }
+  }
+
   const specificationsEntries = product.specifications
     ? Object.entries(product.specifications)
     : [];
@@ -163,7 +304,15 @@ export default function ProductDetailPage() {
         <div className="space-y-4">
           <div className="relative h-[340px] md:h-[420px] rounded-3xl overflow-hidden border border-white/10 bg-[rgba(255,255,255,0.04)]">
             {selectedImage ? (
-              <Image src={selectedImage} alt={product.productName} fill className="object-cover" />
+              <Image 
+                src={selectedImage} 
+                alt={product.productName} 
+                fill 
+                className="object-contain p-4"
+                unoptimized={selectedImage.startsWith('data:')}
+                quality={100}
+                priority
+              />
             ) : (
               <div className="flex h-full items-center justify-center text-gray-500">
                 <FiImage className="text-5xl" />
@@ -189,7 +338,14 @@ export default function ProductDetailPage() {
                     selectedImage === image ? "border-[var(--gold)]" : "border-white/10"
                   }`}
                 >
-                  <Image src={image} alt="Thumbnail" fill className="object-cover" />
+                  <Image 
+                    src={image} 
+                    alt="Thumbnail" 
+                    fill 
+                    className="object-contain p-1"
+                    unoptimized={image.startsWith('data:')}
+                    quality={90}
+                  />
                 </button>
               ))}
             </div>
@@ -230,11 +386,25 @@ export default function ProductDetailPage() {
                 {product.stockQuantity > 0 ? `${product.stockQuantity} in stock` : "Out of stock"}
               </span>
             </div>
+            {product.weight && (
+              <div className="flex items-center justify-between text-xs text-gray-400">
+                <span>Weight</span>
+                <span className="flex items-center gap-1">
+                  <FaWeight /> {product.weight} kg
+                </span>
+              </div>
+            )}
             <button
               onClick={handleAddToCart}
               className="btn-primary w-full px-6 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
             >
               <FaShoppingCart /> Add to cart
+            </button>
+            <button
+              onClick={() => setShowMessageForm(true)}
+              className="btn-accent w-full px-6 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+            >
+              <FaEnvelope /> Message Vendor
             </button>
           </div>
 
@@ -302,9 +472,196 @@ export default function ProductDetailPage() {
                 {product.vendor.storeDescription}
               </p>
             )}
+            {product.vendor.whatsappNumber && (
+              <a
+                href={`https://wa.me/${product.vendor.whatsappNumber.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-accent w-full px-4 py-2 rounded-xl text-xs font-semibold text-center inline-block"
+              >
+                WhatsApp Vendor
+              </a>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Reviews Section */}
+      <div className="glass-surface rounded-3xl p-6 md:p-10 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-extrabold text-white">Customer Reviews</h2>
+            <p className="text-sm text-gray-300 mt-1">
+              {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowReviewForm(true)}
+            className="btn-primary px-6 py-3 rounded-xl text-sm font-semibold"
+          >
+            Write a Review
+          </button>
+        </div>
+
+        {reviews.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <p>No reviews yet. Be the first to review this product!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <div key={review.id} className="border border-white/10 rounded-2xl bg-[rgba(255,255,255,0.03)] p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-white">
+                      {review.customer.firstName} {review.customer.lastName}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <FaStar
+                        key={i}
+                        className={i < review.rating ? "text-[var(--gold)]" : "text-gray-600"}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {review.comment && (
+                  <p className="text-sm text-gray-300 leading-relaxed">{review.comment}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Review Form Modal */}
+      {showReviewForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="glass-surface rounded-3xl p-8 max-w-md w-full space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-extrabold text-white">Write a Review</h3>
+              <button
+                onClick={() => setShowReviewForm(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitReview} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Rating</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className="text-3xl"
+                    >
+                      <FaStar
+                        className={star <= reviewRating ? "text-[var(--gold)]" : "text-gray-600"}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Comment (Optional)
+                </label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="input w-full h-32"
+                  placeholder="Share your experience with this product..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewForm(false)}
+                  className="btn-secondary flex-1 px-6 py-3 rounded-xl text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="btn-primary flex-1 px-6 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
+                >
+                  {submittingReview ? "Submitting..." : "Submit Review"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Message Vendor Modal */}
+      {showMessageForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="glass-surface rounded-3xl p-8 max-w-md w-full space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-extrabold text-white">Message Vendor</h3>
+              <button
+                onClick={() => setShowMessageForm(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSendMessage} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Subject</label>
+                <input
+                  type="text"
+                  value={messageSubject}
+                  onChange={(e) => setMessageSubject(e.target.value)}
+                  required
+                  className="input w-full"
+                  placeholder="e.g., Question about product availability"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Message</label>
+                <textarea
+                  value={messageContent}
+                  onChange={(e) => setMessageContent(e.target.value)}
+                  required
+                  className="input w-full h-32"
+                  placeholder="Write your message to the vendor..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMessageForm(false)}
+                  className="btn-secondary flex-1 px-6 py-3 rounded-xl text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingMessage}
+                  className="btn-primary flex-1 px-6 py-3 rounded-xl text-sm font-semibold disabled:opacity-50"
+                >
+                  {submittingMessage ? "Sending..." : "Send Message"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

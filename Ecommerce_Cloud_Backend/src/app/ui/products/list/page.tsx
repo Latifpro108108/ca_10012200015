@@ -257,7 +257,14 @@ export default function ProductsListPage() {
             <div key={product.id} className="glass-surface rounded-3xl overflow-hidden flex flex-col">
               <div className="relative h-56 bg-[rgba(255,255,255,0.05)]">
                 {product.imageURL ? (
-                  <Image src={product.imageURL} alt={product.productName} fill className="object-cover" />
+                  <Image 
+                    src={product.imageURL} 
+                    alt={product.productName} 
+                    fill 
+                    className="object-contain p-2"
+                    unoptimized={product.imageURL.startsWith('data:')}
+                    quality={95}
+                  />
                 ) : (
                   <div className="flex h-full items-center justify-center text-gray-500">
                     <FiImage className="text-4xl" />
