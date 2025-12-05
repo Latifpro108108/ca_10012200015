@@ -1,6 +1,6 @@
 # 🛒 GoMart - Ghana's Premier E-commerce Platform
 
-[![GitHub Repository](https://img.shields.io/badge/GitHub-Ecommerce_Cloud_Backend-blue?style=flat-square&logo=github)](https://github.com/Latifpro108108/Ecommerce_Cloud_Backend.git)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-GoMart-blue?style=flat-square&logo=github)](https://github.com/fejiro0/Famous_Akpovogbeta_10211100297_EcommerceApp.git)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green?style=flat-square&logo=node.js)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?style=flat-square&logo=mongodb)](https://mongodb.com/)
 [![Next.js](https://img.shields.io/badge/Frontend-Next.js-black?style=flat-square&logo=next.js)](https://nextjs.org/)
@@ -11,8 +11,7 @@ GoMart is an innovative, comprehensive e-commerce platform designed specifically
 
 ## 📁 Repository Information
 
-**Repository:** [Ecommerce_Cloud_Backend](https://github.com/Latifpro108108/Ecommerce_Cloud_Backend.git)  
-**Author:** Latifpro108108  
+**Repository:** [GoMart E-commerce App](https://github.com/fejiro0/Famous_Akpovogbeta_10211100297_EcommerceApp.git)  
 **Technology:** Full-stack JavaScript (Node.js + Next.js)  
 **Database:** MongoDB Atlas with Prisma ORM
 
@@ -45,39 +44,36 @@ GoMart is an innovative, comprehensive e-commerce platform designed specifically
 ## 🏗️ Project Structure
 
 ```
-gomart/
-├── backend/                    # Express.js API Server
-│   ├── config/                # Database and app configuration
-│   ├── controllers/           # Route controllers
-│   ├── middleware/            # Custom middleware
-│   ├── models/                # Database models (Prisma)
-│   ├── routes/                # API routes
-│   ├── utils/                 # Utility functions
-│   ├── prisma/                # Prisma schema and migrations
-│   └── server.js              # Main server file
-├── src/                       # Next.js Frontend
+EcommerceCloudApp/
+├── prisma/                    # Prisma schema and seed files
+│   ├── schema.prisma          # Database schema
+│   └── seed.ts                # Database seeding script
+├── src/                       # Next.js Application
+│   ├── app/                   # Next.js App Router
+│   │   ├── api/               # API routes
+│   │   ├── ui/                # UI pages
+│   │   ├── layout.tsx         # Root layout
+│   │   └── page.tsx           # Home page
 │   ├── components/            # Reusable UI components
-│   ├── pages/                 # Next.js pages
-│   ├── styles/                # CSS and styling
-│   └── utils/                 # Frontend utilities
+│   └── lib/                   # Utility libraries
+├── public/                    # Static assets
 └── README.md                  # Project documentation
 ```
 
 ## 🛠️ Technology Stack
 
-### Backend
-- **Runtime**: Node.js
-- **Framework**: Express.js
+### Backend (API Routes)
+- **Framework**: Next.js API Routes
 - **Database**: MongoDB with Prisma ORM
 - **Authentication**: JWT (JSON Web Tokens)
-- **Security**: Helmet, CORS, Rate Limiting
-- **Validation**: Built-in validation middleware
+- **Validation**: Built-in validation
 
 ### Frontend
-- **Framework**: Next.js (React)
+- **Framework**: Next.js 15 (React 19)
 - **Styling**: TailwindCSS
-- **State Management**: React Context/Redux (future)
+- **State Management**: React Hooks
 - **UI Components**: Custom components with Tailwind
+- **Notifications**: React Toastify
 
 ### Database Schema
 - **Customer Management**: User profiles, authentication
@@ -97,47 +93,43 @@ gomart/
 
 ### Clone Repository
 ```bash
-git clone https://github.com/Latifpro108108/Ecommerce_Cloud_Backend.git
-cd Ecommerce_Cloud_Backend
+git clone https://github.com/fejiro0/Famous_Akpovogbeta_10211100297_EcommerceApp.git
+cd Famous_Akpovogbeta_10211100297_EcommerceApp/EcommerceCloudApp
 ```
 
-### Backend Setup
+### Project Setup
 
-1. **Navigate to backend directory**:
-   ```bash
-   cd gomart/backend
-   ```
-
-2. **Install dependencies**:
+1. **Install dependencies**:
    ```bash
    npm install
    ```
 
-3. **Environment Configuration**:
-   Create a `.env` file in the backend directory with the following variables:
+2. **Environment Configuration**:
+   Create a `.env` file in the project root with the following variables:
    ```env
    # Database Configuration
-   DATABASE_URL="mongodb+srv://gomartDatabase:GoMart2026@sneldi.wqqosr4.mongodb.net/gomart?retryWrites=true&w=majority&appName=sneldi"
+   DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/gomart?retryWrites=true&w=majority"
    
-   # JWT Secret (Change in production)
+   # JWT Secret (Change in production - use a strong random string)
    JWT_SECRET="your-super-secret-jwt-key-change-in-production"
    
    # Server Configuration
-   PORT=5000
+   PORT=3000
    NODE_ENV=development
-   CORS_ORIGIN=http://localhost:3000
    
-   # Rate Limiting
-   RATE_LIMIT_WINDOW_MS=900000
-   RATE_LIMIT_MAX_REQUESTS=100
+   # Next.js Configuration
+   NEXTAUTH_SECRET="your-nextauth-secret-key"
+   NEXTAUTH_URL="http://localhost:3000"
    
    # Ghana-specific configurations
    DEFAULT_CURRENCY=GHS
    DEFAULT_REGION="Greater Accra"
    DEFAULT_COUNTRY=Ghana
    ```
+   
+   **Important:** Never commit your `.env` file to git. Use `.env.example` as a template.
 
-4. **Database Setup**:
+3. **Database Setup**:
    ```bash
    # Generate Prisma client
    npm run db:generate
@@ -145,35 +137,19 @@ cd Ecommerce_Cloud_Backend
    # Push schema to MongoDB
    npm run db:push
    
+   # (Optional) Seed the database with sample data
+   npm run db:seed
+   
    # (Optional) Open Prisma Studio to view data
    npm run db:studio
    ```
 
-5. **Start the server**:
+4. **Start the development server**:
    ```bash
-   # Development mode
    npm run dev
+   ```
    
-   # Production mode
-   npm start
-   ```
-
-### Frontend Setup
-
-1. **Navigate to main project directory**:
-   ```bash
-   cd gomart
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start development server**:
-   ```bash
-   npm run dev
-   ```
+   The application will be available at `http://localhost:3000`
 
 ## 📋 MongoDB Atlas Setup Guide
 
@@ -183,26 +159,25 @@ cd Ecommerce_Cloud_Backend
 3. Create a new cluster
 
 ### 2. Database Configuration
-1. **Cluster Name**: `sneldi` (as referenced in the connection string)
-2. **Database Name**: `gomart`
-3. **Username**: `gomartDatabase`
-4. **Password**: `GoMart2026`
+1. Create a new database (e.g., `gomart`)
+2. Create a database user with appropriate permissions
+3. Set a strong password (store it securely)
 
 ### 3. Network Access
 1. Go to "Network Access" in Atlas dashboard
-2. Add IP Address: `0.0.0.0/0` (for development - restrict in production)
+2. Add your IP Address (or `0.0.0.0/0` for development - **restrict in production**)
 3. Save changes
 
-### 4. Database Access
-1. Go to "Database Access"
-2. Create database user with username: `gomartDatabase`
-3. Set password: `GoMart2026`
-4. Assign "Read and write to any database" role
+### 4. Get Connection String
+1. Go to "Database" → "Connect"
+2. Choose "Connect your application"
+3. Copy the connection string
+4. Replace `<username>` and `<password>` with your database credentials
+5. Add your database name to the connection string
 
-### 5. Connection String
-The connection string format is:
+### 5. Connection String Format
 ```
-mongodb+srv://gomartDatabase:GoMart2026@sneldi.wqqosr4.mongodb.net/gomart?retryWrites=true&w=majority&appName=sneldi
+mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority
 ```
 
 ## 🔌 API Endpoints
@@ -240,31 +215,35 @@ mongodb+srv://gomartDatabase:GoMart2026@sneldi.wqqosr4.mongodb.net/gomart?retryW
 Test the API endpoints using tools like Postman or curl:
 
 ```bash
-# Health check
-curl http://localhost:5000/health
-
 # Get all products
-curl http://localhost:5000/api/products
+curl http://localhost:3000/api/products
+
+# Get all categories
+curl http://localhost:3000/api/categories
 
 # Register a customer
-curl -X POST http://localhost:5000/api/customers/register \
+curl -X POST http://localhost:3000/api/customers \
   -H "Content-Type: application/json" \
   -d '{"firstName":"John","lastName":"Doe","email":"john@example.com","phoneNumber":"0241234567","password":"password123","region":"Greater Accra","city":"Accra"}'
 ```
 
 ## 🚀 Deployment
 
-### Backend Deployment
-1. Set up environment variables in production
+### Production Deployment
+1. Set up environment variables in your hosting platform
 2. Change `NODE_ENV` to `production`
-3. Use strong JWT secret
-4. Configure proper CORS origins
-5. Set up MongoDB Atlas with IP restrictions
+3. Use strong, unique secrets for JWT and NextAuth
+4. Configure MongoDB Atlas with IP restrictions (remove `0.0.0.0/0`)
+5. Build the Next.js application: `npm run build`
+6. Deploy to Vercel, Netlify, or similar platform
+7. Configure environment variables in your hosting platform's dashboard
 
-### Frontend Deployment
-1. Build the Next.js application: `npm run build`
-2. Deploy to Vercel, Netlify, or similar platform
-3. Configure environment variables for API endpoints
+### Security Checklist
+- ✅ Never commit `.env` files
+- ✅ Use strong, unique passwords for database
+- ✅ Restrict MongoDB Atlas network access
+- ✅ Use environment-specific secrets
+- ✅ Enable HTTPS in production
 
 ## 📖 Database Schema
 
@@ -297,9 +276,10 @@ This project is licensed under the MIT License.
 ### Common Issues
 
 1. **Database Connection Issues**:
-   - Verify MongoDB Atlas credentials
-   - Check network access settings
+   - Verify MongoDB Atlas credentials in `.env` file
+   - Check network access settings in MongoDB Atlas
    - Ensure correct database URL format
+   - Verify database user has proper permissions
 
 2. **Prisma Client Issues**:
    - Run `npm run db:generate` to regenerate client
