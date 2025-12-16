@@ -5,6 +5,9 @@
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?style=flat-square&logo=mongodb)](https://mongodb.com/)
 [![Next.js](https://img.shields.io/badge/Frontend-Next.js-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 
+## 🌟 Developer
+Name: DABONE ABDOUL LATIF
+Roll Number: 10012200015
 ## 🌟 Project Overview
 
 GoMart is an innovative, comprehensive e-commerce platform designed specifically for the Ghanaian market. Built with modern technologies and localized features, it provides a seamless shopping experience with integrated Mobile Money payments, local delivery services, and Ghana-specific business logic.
@@ -91,11 +94,6 @@ EcommerceCloudApp/
 - MongoDB Atlas account (or local MongoDB)
 - Git
 
-### Clone Repository
-```bash
-git clone https://github.com/fejiro0/ca_10211100297.git
-cd ca_10211100297/EcommerceCloudApp
-```
 
 ### Project Setup
 
@@ -128,6 +126,8 @@ cd ca_10211100297/EcommerceCloudApp
    ```
    
    **Important:** Never commit your `.env` file to git. Use `.env.example` as a template.
+   
+   **Note:** The `.env` file contains sensitive information (database credentials, JWT secrets, etc.) and has been intentionally excluded from this repository for security reasons. You must create your own `.env` file with your personal MongoDB connection string and secrets.
 
 3. **Database Setup**:
    ```bash
