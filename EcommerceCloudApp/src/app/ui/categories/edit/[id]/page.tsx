@@ -38,8 +38,9 @@ export default function EditCategoryPage() {
           categoryName: category.categoryName,
           description: category.description || "",
         });
-      } catch (error: any) {
-        toast.error(error.message || "Failed to load category");
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to load category";
+        toast.error(errorMessage);
         router.push("/ui/categories/list");
       } finally {
         setLoading(false);
@@ -68,7 +69,8 @@ export default function EditCategoryPage() {
       toast.success("Category updated successfully!");
       router.push("/ui/categories/list");
     } catch (error: any) {
-      toast.error(error.message || "Failed to update category");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update category";
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }

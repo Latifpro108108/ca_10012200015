@@ -28,8 +28,9 @@ export default function LoginPage() {
 
       toast.success("Welcome back");
       router.push("/");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to sign in");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to sign in";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

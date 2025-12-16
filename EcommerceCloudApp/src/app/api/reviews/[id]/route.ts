@@ -91,6 +91,7 @@ export async function PUT(
     }
 
     // Build update data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {};
     if (rating) updateData.rating = parseInt(rating);
     if (comment !== undefined) updateData.comment = comment;

@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const paymentMethod = searchParams.get('paymentMethod');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
     if (orderId) where.orderId = orderId;
     if (status) where.status = status;

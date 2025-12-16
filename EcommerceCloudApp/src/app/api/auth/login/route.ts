@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _pw, ...safeCustomer } = customer;
 
     return NextResponse.json({
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       message: 'Login successful',
       data: { customer: safeCustomer },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         status: 'error',

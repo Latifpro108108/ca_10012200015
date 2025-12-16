@@ -16,7 +16,13 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
+    const where: {
+      isActive: boolean;
+      categoryId?: string;
+      vendorId?: string;
+      price?: { gte?: number; lte?: number };
+      OR?: Array<{ productName?: { contains: string; mode: string }; description?: { contains: string; mode: string }; brand?: { contains: string; mode: string }; sku?: { contains: string; mode: string } }>;
+    } = {
       isActive: true, // Only show active products by default
     };
 

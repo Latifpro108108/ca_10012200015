@@ -62,8 +62,9 @@ export default function EditCustomerPage() {
           address: customer.address,
           isActive: customer.isActive,
         });
-      } catch (error: any) {
-        toast.error(error.message || "Failed to load customer");
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to load customer";
+        toast.error(errorMessage);
         router.push("/ui/customers/list");
       } finally {
         setLoading(false);
@@ -92,7 +93,8 @@ export default function EditCustomerPage() {
       toast.success("Customer updated successfully!");
       router.push("/ui/customers/list");
     } catch (error: any) {
-      toast.error(error.message || "Failed to update customer");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update customer";
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }

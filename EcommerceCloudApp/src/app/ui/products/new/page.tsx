@@ -152,8 +152,9 @@ export default function NewProductPage() {
 
       toast.success("Product created successfully!");
       router.push("/ui/products/list");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create product");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create product";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -154,8 +154,9 @@ export default function EditProductPage() {
           const data = await vendorsRes.json();
           setVendors(data.data?.vendors || []);
         }
-      } catch (error: any) {
-        toast.error(error.message || "Failed to load product");
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to load product";
+        toast.error(errorMessage);
         router.push("/ui/products/list");
       } finally {
         setLoading(false);
@@ -248,8 +249,9 @@ export default function EditProductPage() {
 
       toast.success("Product updated successfully!");
       router.push("/ui/products/list");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update product");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update product";
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }

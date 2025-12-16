@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const isVerified = searchParams.get('isVerified');
     const region = searchParams.get('region');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       isActive: true, // Only show active vendors by default
     };

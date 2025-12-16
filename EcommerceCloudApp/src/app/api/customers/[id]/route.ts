@@ -39,19 +39,20 @@ export async function GET(
       status: 'success',
       data: { customer },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching customer:', error);
-    console.error('Error details:', {
-      name: error?.name,
-      message: error?.message,
-      stack: error?.stack,
-      code: error?.code
-    });
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
+    }
     return NextResponse.json(
       {
         status: 'error',
-        message: error?.message || 'Failed to fetch customer',
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+        message: error instanceof Error ? error.message : 'Failed to fetch customer',
+        details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
       },
       { status: 500 }
     );
@@ -114,12 +115,12 @@ export async function PUT(
       message: 'Customer updated successfully',
       data: { customer },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating customer:', error);
     return NextResponse.json(
       {
         status: 'error',
-        message: error?.message || 'Failed to update customer',
+        message: error instanceof Error ? error.message : 'Failed to update customer',
       },
       { status: 500 }
     );
@@ -159,12 +160,12 @@ export async function DELETE(
       status: 'success',
       message: 'Customer deleted successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting customer:', error);
     return NextResponse.json(
       {
         status: 'error',
-        message: error?.message || 'Failed to delete customer',
+        message: error instanceof Error ? error.message : 'Failed to delete customer',
       },
       { status: 500 }
     );

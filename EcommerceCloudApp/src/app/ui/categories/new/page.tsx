@@ -33,8 +33,9 @@ export default function NewCategoryPage() {
 
       toast.success("Category created successfully!");
       router.push("/ui/categories/list");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create category");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create category";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

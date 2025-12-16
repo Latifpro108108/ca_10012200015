@@ -131,9 +131,10 @@ export default function ProfilePage() {
         city: customerData.city || "",
         address: customerData.address || "",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching customer:", error);
-      toast.error(error.message || "Failed to load profile");
+      const errorMessage = error instanceof Error ? error.message : "Failed to load profile";
+      toast.error(errorMessage);
       // Don't redirect on network errors, let user retry
     } finally {
       setLoading(false);
@@ -183,7 +184,7 @@ export default function ProfilePage() {
       setCustomer(data.data.customer);
       setEditing(false);
       toast.success("Profile updated successfully!");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating customer:", error);
       toast.error(error.message || "Failed to update profile");
     } finally {

@@ -112,6 +112,7 @@ export async function PUT(
     }
 
     // Build update data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {};
     if (vendorName) updateData.vendorName = vendorName;
     if (phoneNumber) updateData.phoneNumber = phoneNumber;

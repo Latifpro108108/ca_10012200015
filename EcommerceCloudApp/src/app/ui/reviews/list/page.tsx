@@ -156,7 +156,7 @@ export default function ReviewsListPage() {
               </div>
 
               {review.comment && (
-                <p className="text-gray-700 mb-3">"{review.comment}"</p>
+                <p className="text-gray-700 mb-3">&quot;{review.comment}&quot;</p>
               )}
 
               <div className="text-sm text-gray-500">

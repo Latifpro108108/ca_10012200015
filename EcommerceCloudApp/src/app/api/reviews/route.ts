@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const customerId = searchParams.get('customerId');
     const minRating = searchParams.get('minRating');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
 
     if (productId) where.productId = productId;

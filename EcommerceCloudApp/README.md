@@ -280,6 +280,48 @@ This project is licensed under the MIT License.
    - Check network access settings in MongoDB Atlas
    - Ensure correct database URL format
    - Verify database user has proper permissions
+   
+   **Common Error: "no record found for Query" or "DNS resolution" error**
+   
+   This error occurs when the DATABASE_URL in your `.env` file is incomplete or incorrectly formatted. 
+   
+   **Solution:**
+   1. Make sure your `.env` file is in the `EcommerceCloudApp` folder (same level as `package.json`)
+   2. Verify your DATABASE_URL follows this EXACT format:
+   ```
+   DATABASE_URL="mongodb+srv://username:password@cluster-name.xxxxx.mongodb.net/database-name?retryWrites=true&w=majority"
+   ```
+   
+   3. **Important checks:**
+      - Replace `username` with your MongoDB Atlas username
+      - Replace `password` with your MongoDB Atlas password (URL-encode special characters like @, #, $, etc.)
+      - Replace `cluster-name.xxxxx` with your actual cluster name (e.g., `cluster0.abc123`)
+      - Replace `database-name` with your database name (e.g., `gomart`)
+      - Make sure there are NO spaces around the `=` sign
+      - Make sure the entire URL is wrapped in double quotes
+      - Make sure there are NO line breaks in the URL
+   
+   4. **Example of CORRECT format:**
+   ```
+   DATABASE_URL="mongodb+srv://myuser:mypassword123@cluster0.abc123.mongodb.net/gomart?retryWrites=true&w=majority"
+   ```
+   
+   5. **If your password has special characters**, URL-encode them:
+      - `@` becomes `%40`
+      - `#` becomes `%23`
+      - `$` becomes `%24`
+      - `%` becomes `%25`
+      - `&` becomes `%26`
+   
+   6. **Verify your .env file:**
+      - Open `.env` file in a text editor (Notepad, VS Code, etc.)
+      - Check that DATABASE_URL is on a single line
+      - Make sure there are no extra spaces or hidden characters
+      - Save the file and try again
+   
+   7. **Test your connection string:**
+      - You can test if your connection string works by running: `npx prisma db pull` (this will try to connect)
+      - If it fails, double-check your credentials in MongoDB Atlas dashboard
 
 2. **Prisma Client Issues**:
    - Run `npm run db:generate` to regenerate client

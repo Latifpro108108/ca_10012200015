@@ -9,7 +9,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { quantityChange, operation } = body; // quantityChange: positive to add, negative to subtract
+    const { quantityChange } = body; // quantityChange: positive to add, negative to subtract
 
     if (quantityChange === undefined || quantityChange === null) {
       return NextResponse.json(

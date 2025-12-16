@@ -162,8 +162,9 @@ export default function NewVendorPage() {
 
       toast.success("Vendor created successfully!");
       router.push("/ui/vendors/list");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create vendor");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create vendor";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

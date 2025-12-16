@@ -37,8 +37,9 @@ export default function RegisterPage() {
       }
       toast.success("Account created! Welcome to GoMart");
       router.push("/");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to register");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to register";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

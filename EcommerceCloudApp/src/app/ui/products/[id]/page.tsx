@@ -187,7 +187,7 @@ export default function ProductDetailPage() {
     if (!product) return;
     try {
       const stored = localStorage.getItem("gomart:cart");
-      let cart: Array<{
+      const cart: Array<{
         productId: string;
         productName: string;
         price: number;

@@ -70,8 +70,9 @@ export default function EditVendorPage() {
           isVerified: vendor.isVerified,
           isActive: vendor.isActive,
         });
-      } catch (error: any) {
-        toast.error(error.message || "Failed to load vendor");
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to load vendor";
+        toast.error(errorMessage);
         router.push("/ui/vendors/list");
       } finally {
         setLoading(false);
@@ -103,8 +104,9 @@ export default function EditVendorPage() {
 
       toast.success("Vendor updated successfully!");
       router.push("/ui/vendors/list");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update vendor");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update vendor";
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
