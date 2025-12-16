@@ -28,6 +28,7 @@ model Customer {
   // Relationships
   reviews          Review[]
   cart             Cart?
+  orders           Order[]
   sentMessages     Message[] @relation("CustomerMessages")
   conversations    Conversation[] @relation("CustomerConversations")
   vendorProfile    Vendor?   @relation("VendorOwner")
@@ -125,6 +126,7 @@ model Product {
   vendor       Vendor        @relation(fields: [vendorId], references: [id])
   reviews      Review[]
   cartItems    CartItem[]
+  orderItems   OrderItem[]
   conversations Conversation[]
   
   // Performance indexes
@@ -247,4 +249,77 @@ model Message {
   @@index([createdAt])
   
   @@map("messages")
+}
+
+// Order Entity - Customer orders
+model Order {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  totalAmount Float
+  status      String   @default("pending") // pending, processing, shipped, delivered, cancelled
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Foreign Keys
+  customerId  String   @db.ObjectId
+  
+  // Relationships
+  customer    Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+  payments    Payment[]
+  
+  // Indexes
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  
+  @@map("orders")
+}
+
+// OrderItem Entity - Items in an order
+model OrderItem {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  quantity  Int
+  price     Float   // Price at time of order
+  subtotal  Float   // quantity * price
+  
+  // Foreign Keys
+  orderId   String  @db.ObjectId
+  productId String @db.ObjectId
+  
+  // Relationships
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  
+  @@index([orderId])
+  @@index([productId])
+  
+  @@map("orderItems")
+}
+
+// Payment Entity - Payment processing with Mobile Money support
+model Payment {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount              Float
+  paymentMethod       String   // MTN Mobile Money, Vodafone Cash, AirtelTigo Money, Bank Transfer, Cash on Delivery, Credit Card
+  transactionReference String?
+  fees                Float    @default(0)
+  currency            String   @default("GHS")
+  status              String   @default("pending") // pending, completed, failed, refunded
+  paymentDate         DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  // Foreign Keys
+  orderId             String   @db.ObjectId
+  
+  // Relationships
+  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  // Indexes
+  @@index([orderId])
+  @@index([status])
+  @@index([paymentMethod])
+  @@index([paymentDate])
+  
+  @@map("payments")
 }
