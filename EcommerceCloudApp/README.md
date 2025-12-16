@@ -144,6 +144,16 @@ EcommerceCloudApp/
    npm run db:studio
    ```
 
+4. **Admin Credentials** (After running `npm run db:seed`):
+   The seed script creates a default admin user for testing purposes:
+   - **Email**: `admin@gmail.com`
+   - **Password**: `12345`
+   
+   **⚠️ Important Security Note**: 
+   - Change the admin password immediately in production
+   - The default admin credentials are for development/testing only
+   - Never use default credentials in a production environment
+
 4. **Start the development server**:
    ```bash
    npm run dev
