@@ -26,6 +26,7 @@ type ProductDetail = {
   weight?: number | null;
   averageRating: number;
   reviewCount: number;
+  reviews?: Review[];
   category: { id: string; categoryName: string };
   vendor: {
     id: string;
